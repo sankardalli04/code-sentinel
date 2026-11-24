@@ -31,3 +31,14 @@ def test_linter_detects_command_injection():
     code = 'subprocess.run(f"rm -rf {path}", shell=True)'
     findings = linter.scan_code("cleaner.py", code)
     assert any("COMMAND-INJECTION" == f.rule_id for f in findings)
+
+
+def test_linter_ignores_comments():
+    linter = SecurityLinter()
+    code = """
+    # This is a comment mentioning eval() and exec()
+    # Also mentioning shell=True and api_key = 'fake'
+    x = 10 + 20
+    """
+    findings = linter.scan_code("clean.py", code)
+    assert len(findings) == 0

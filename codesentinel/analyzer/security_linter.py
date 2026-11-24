@@ -34,8 +34,13 @@ class SecurityLinter:
         lines = source_code.splitlines()
 
         for idx, line in enumerate(lines, start=1):
+            # Ignore comments so comments like '# no eval()' never trigger false positives
+            code_line = line.split("#")[0].strip()
+            if not code_line:
+                continue
+
             for pattern, rule_id, desc, severity, cwe in self.SECRET_PATTERNS:
-                if re.search(pattern, line):
+                if re.search(pattern, code_line):
                     finding = VulnerabilityFinding(
                         rule_id=rule_id,
                         title=f"{rule_id}: {desc.split(';')[0]}",
