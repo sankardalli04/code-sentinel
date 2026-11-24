@@ -129,7 +129,7 @@
 
           <!-- Remediated Code & Diff Section -->
           <div id="patchSection">
-            <!-- Tabs & Copy Button -->
+            <!-- Tabs & Action Buttons -->
             <div class="flex items-center justify-between mb-2">
               <div class="flex space-x-2 border-b border-slate-800 pb-1">
                 <button id="tabFullCodeBtn" onclick="switchTab('full')" class="text-xs font-semibold px-3 py-1 rounded-t bg-slate-800 text-cyan-400 border-b-2 border-cyan-400 transition">
@@ -139,20 +139,26 @@
                   <i class="fa-solid fa-code-compare mr-1"></i> Git Diff (+ / -)
                 </button>
               </div>
-              <button id="copyCodeBtn" onclick="copyFullCode()" class="text-xs px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded flex items-center space-x-1.5 transition">
-                <i class="fa-solid fa-copy"></i>
-                <span id="copyText">Copy Full Code</span>
-              </button>
+              <div class="flex items-center space-x-2">
+                <button id="downloadPatchBtn" onclick="downloadPatch()" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded flex items-center space-x-1.5 transition">
+                  <i class="fa-solid fa-download"></i>
+                  <span>.patch</span>
+                </button>
+                <button id="copyCodeBtn" onclick="copyFullCode()" class="text-xs px-2.5 py-1 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 rounded flex items-center space-x-1.5 transition">
+                  <i class="fa-solid fa-copy"></i>
+                  <span id="copyText">Copy Full Code</span>
+                </button>
+              </div>
             </div>
 
             <!-- Tab 1: Full Remediated Code -->
             <div id="fullCodeContainer" class="bg-slate-950 border border-slate-800 rounded-lg p-3 overflow-x-auto text-xs font-mono">
-              <pre id="fullCodeOutput" class="text-emerald-300"></pre>
+              <pre id="fullCodeOutput" class="text-emerald-300 leading-relaxed"></pre>
             </div>
 
-            <!-- Tab 2: Unified Git Diff -->
-            <div id="diffContainer" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-3 overflow-x-auto text-xs font-mono">
-              <pre id="diffOutput" class="text-cyan-300"></pre>
+            <!-- Tab 2: Unified Git Diff (GitHub-Style Colorized) -->
+            <div id="diffContainer" class="hidden bg-slate-950 border border-slate-800 rounded-lg p-2 overflow-x-auto text-xs font-mono space-y-0.5">
+              <div id="diffOutput"></div>
             </div>
           </div>
         </div>
@@ -234,16 +240,34 @@ def clean_cache(folder_path: str):
 
         // Render Full Remediated Code & Patch Diff
         const fullPre = document.getElementById('fullCodeOutput');
-        const diffPre = document.getElementById('diffOutput');
+        const diffContainer = document.getElementById('diffOutput');
         currentRemediatedCode = data.remediated_code || code;
+        currentUnifiedDiff = data.patch ? (data.patch.unified_diff || ('--- a/file.py\n+++ b/file.py\n@@ -1,3 +1,3 @@\n- ' + data.patch.original_snippet + '\n+ ' + data.patch.remediated_snippet)) : '';
 
         if (data.patch || data.remediated_code) {
           fullPre.textContent = currentRemediatedCode;
-          if (data.patch) {
-            diffPre.textContent = data.patch.unified_diff || ('--- a/file.py\n+++ b/file.py\n@@ -1,3 +1,3 @@\n- ' + data.patch.original_snippet + '\n+ ' + data.patch.remediated_snippet);
+          diffContainer.innerHTML = '';
+
+          if (currentUnifiedDiff) {
+            const lines = currentUnifiedDiff.split('\n');
+            lines.forEach(l => {
+              const div = document.createElement('div');
+              if (l.startsWith('+') && !l.startsWith('+++')) {
+                div.className = 'bg-emerald-950/40 text-emerald-300 border-l-2 border-emerald-500 px-2 py-0.5 rounded-sm font-mono';
+              } else if (l.startsWith('-') && !l.startsWith('---')) {
+                div.className = 'bg-red-950/40 text-red-300 border-l-2 border-red-500 px-2 py-0.5 rounded-sm font-mono';
+              } else if (l.startsWith('@')) {
+                div.className = 'bg-cyan-950/30 text-cyan-400 font-semibold px-2 py-0.5 rounded-sm font-mono text-[11px]';
+              } else {
+                div.className = 'text-slate-400 px-2 py-0.5 font-mono';
+              }
+              div.textContent = l;
+              diffContainer.appendChild(div);
+            });
           } else {
-            diffPre.textContent = '# No changes needed. Code is clean!';
+            diffContainer.innerHTML = '<div class="text-emerald-400 p-2 font-mono"># Code is clean. Zero diff required!</div>';
           }
+
           document.getElementById('patchSection').classList.remove('hidden');
         } else {
           document.getElementById('patchSection').classList.add('hidden');
@@ -262,6 +286,7 @@ def clean_cache(folder_path: str):
     }
 
     let currentRemediatedCode = '';
+    let currentUnifiedDiff = '';
 
     function switchTab(tab) {
       const fullBtn = document.getElementById('tabFullCodeBtn');
@@ -291,6 +316,22 @@ def clean_cache(folder_path: str):
           copyText.textContent = 'Copy Full Code';
         }, 2000);
       });
+    }
+
+    function downloadPatch() {
+      if (!currentUnifiedDiff) {
+        alert('No patch diff available to download.');
+        return;
+      }
+      const blob = new Blob([currentUnifiedDiff], { type: 'text/x-diff' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'codesentinel_remediation.patch';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
   </script>
 </body>

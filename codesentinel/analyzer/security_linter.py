@@ -26,6 +26,9 @@ class SecurityLinter:
         (r"cursor\.execute\s*\(\s*['\"].*?%\s*\(", "SQL-INJECTION-PERCENT", "SQL query formatted using % operator exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
         (r"pickle\.loads\s*\(", "INSECURE-DESERIALIZATION", "Unpickling untrusted data leads to remote code execution", VulnerabilitySeverity.HIGH, "CWE-502"),
         (r"hashlib\.(md5|sha1)\s*\(", "WEAK-CRYPTO-HASH", "Use of MD5/SHA1 is cryptographically broken; use SHA256 or bcrypt/argon2", VulnerabilitySeverity.MEDIUM, "CWE-328"),
+        (r"open\s*\(\s*f['\"].*?\{.*?\}", "PATH-TRAVERSAL", "Dynamic path construction in open() exposes application to path traversal", VulnerabilitySeverity.HIGH, "CWE-22"),
+        (r"random\.(random|randint|choice)\s*\(", "INSECURE-RANDOM", "Pseudo-random generator used; use secrets module for secure tokens", VulnerabilitySeverity.MEDIUM, "CWE-338"),
+        (r"(?i)debug\s*=\s*True", "DEBUG-MODE-ENABLED", "Debug mode enabled exposes internal stack traces in production", VulnerabilitySeverity.LOW, "CWE-489"),
     ]
 
     def scan_code(self, file_path: str, source_code: str) -> List[VulnerabilityFinding]:
