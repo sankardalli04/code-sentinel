@@ -198,13 +198,13 @@ def clean_cache(folder_path: str):
           data.findings.forEach(f => {
             const card = document.createElement('div');
             card.className = 'p-3 bg-red-950/30 border border-red-800/40 rounded-lg flex items-start justify-between';
-            card.innerHTML = \`
+            card.innerHTML = `
               <div>
-                <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 mb-1">\${f.severity} - \${f.rule_id}</span>
-                <p class="text-xs text-slate-200 font-medium">\${f.title}</p>
-                <p class="text-[11px] text-slate-400 mt-0.5">Line \${f.line_number}: \${f.description}</p>
+                <span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 mb-1">${f.severity} - ${f.rule_id}</span>
+                <p class="text-xs text-slate-200 font-medium">${f.title}</p>
+                <p class="text-[11px] text-slate-400 mt-0.5">Line ${f.line_number}: ${f.description}</p>
               </div>
-            \`;
+            `;
             vulnList.appendChild(card);
           });
         } else {
@@ -214,7 +214,7 @@ def clean_cache(folder_path: str):
         // Render Patch Diff
         const diffPre = document.getElementById('diffOutput');
         if (data.patch) {
-          diffPre.textContent = data.patch.unified_diff || \`--- a/file.py\\n+++ b/file.py\\n@@ -1,3 +1,3 @@\\n- \${data.patch.original_snippet}\\n+ \${data.patch.remediated_snippet}\`;
+          diffPre.textContent = data.patch.unified_diff || ('--- a/file.py\n+++ b/file.py\n@@ -1,3 +1,3 @@\n- ' + data.patch.original_snippet + '\n+ ' + data.patch.remediated_snippet);
           document.getElementById('patchSection').classList.remove('hidden');
         } else {
           document.getElementById('patchSection').classList.add('hidden');
