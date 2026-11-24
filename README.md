@@ -2,10 +2,13 @@
 ### Autonomous Agentic Code Auditor & Isolated Sandbox Remediator
 
 [![CI](https://github.com/sankardalli04/code-sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/sankardalli04/code-sentinel/actions)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Render-46E3B7.svg?logo=render)](https://code-sentinel-9g90.onrender.com)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%20%7C%203.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg?logo=fastapi)](https://fastapi.tiangolo.com)
 [![Docker](https://img.shields.io/badge/Docker-Sandboxing-2496ED.svg?logo=docker)](https://www.docker.com/)
+
+🌐 **Live Interactive Web Dashboard:** [https://code-sentinel-9g90.onrender.com](https://code-sentinel-9g90.onrender.com)
 
 **CodeSentinel** is an autonomous DevSecOps agent that audits Pull Requests, identifies OWASP vulnerabilities and runtime bugs, isolates execution within ephemeral sandboxes, and executes an automated self-healing remediation loop.
 
