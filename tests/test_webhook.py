@@ -18,12 +18,21 @@ def test_signature_verification():
     assert verify_github_signature(payload, secret, None) is False
 
 
-def test_health_endpoint():
-    response = client.get("/health")
+def test_dashboard_ui_endpoint():
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "CodeSentinel" in response.text
+    assert "AST Scope Pruning" in response.text
+
+
+def test_audit_snippet_endpoint():
+    code = 'cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")'
+    response = client.post("/api/v1/audit/snippet", json={"code": code})
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "healthy"
-    assert data["service"] == "CodeSentinel"
+    assert data["status"] == "success"
+    assert len(data["findings"]) > 0
+    assert data["patch"] is not None
 
 
 def test_webhook_enqueues_valid_pr():

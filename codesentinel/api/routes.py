@@ -1,14 +1,19 @@
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks, Header
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import json
 import os
+import difflib
 
 from codesentinel.core.config import settings
 from codesentinel.core.security import verify_github_signature
 from codesentinel.core.logger import logger
 from codesentinel.queue.task_queue import task_queue
 from codesentinel.agent.auditor import CodeSentinelAuditor
+from codesentinel.agent.llm_client import LLMClient
+from codesentinel.analyzer.security_linter import SecurityLinter
+from codesentinel.analyzer.ast_parser import PythonASTScoper
 from codesentinel.analyzer.models import AuditReport
 
 router = APIRouter()
@@ -18,6 +23,68 @@ class LocalAuditRequest(BaseModel):
     workspace_path: str
     test_command: str = "pytest -v"
     target_files: Optional[List[str]] = None
+
+
+class SnippetAuditRequest(BaseModel):
+    code: str
+
+
+@router.get("/", response_class=HTMLResponse)
+@router.get("/dashboard", response_class=HTMLResponse)
+async def serve_dashboard():
+    """Serves the interactive CodeSentinel Web Dashboard UI."""
+    html_path = os.path.join(os.path.dirname(__file__), "..", "web", "templates", "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as fh:
+            return HTMLResponse(content=fh.read())
+    return HTMLResponse(content="<h1>CodeSentinel Dashboard</h1><p>Template not found.</p>")
+
+
+@router.post("/api/v1/audit/snippet")
+async def audit_code_snippet(req: SnippetAuditRequest):
+    """
+    Audits an in-memory code snippet, executes AST scoping, and produces a verified remediation.
+    Powers the interactive web UI and instant playground.
+    """
+    linter = SecurityLinter()
+    scoper = PythonASTScoper()
+    llm = LLMClient()
+
+    findings = linter.scan_code("snippet.py", req.code)
+    lines_to_scope = {f.line_number for f in findings} or {1}
+    scoped_res = scoper.extract_modified_scopes("snippet.py", req.code, lines_to_scope)
+
+    patch_data = None
+    if findings:
+        prompt_text = f"File: snippet.py\nCode:\n{req.code}\nVulnerabilities:\n" + "\n".join(
+            f"- {f.rule_id}: {f.description}" for f in findings
+        )
+        fix = llm.generate_fix(prompt_text)
+        orig = fix.get("original_snippet", "").strip()
+        new_c = fix.get("remediated_snippet", "").strip()
+
+        # Compute diff
+        remediated_code = req.code.replace(orig, new_c, 1) if orig in req.code else req.code
+        diff = "\n".join(difflib.unified_diff(
+            req.code.splitlines(),
+            remediated_code.splitlines(),
+            fromfile="a/snippet.py",
+            tofile="b/snippet.py",
+            lineterm=""
+        ))
+        patch_data = {
+            "original_snippet": orig,
+            "remediated_snippet": new_c,
+            "unified_diff": diff,
+            "explanation": fix.get("explanation", "Automated remediation patch.")
+        }
+
+    return {
+        "status": "success",
+        "findings": [f.model_dump() for f in findings],
+        "token_savings_pct": scoped_res.token_reduction_pct,
+        "patch": patch_data
+    }
 
 
 @router.get("/health")
