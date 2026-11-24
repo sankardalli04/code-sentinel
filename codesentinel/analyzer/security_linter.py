@@ -22,6 +22,9 @@ class SecurityLinter:
         (r"eval\s*\((.*?)\)", "INSECURE-EVAL", "Dynamic code evaluation via eval() allows arbitrary code execution", VulnerabilitySeverity.CRITICAL, "CWE-95"),
         (r"exec\s*\((.*?)\)", "INSECURE-EXEC", "Dynamic code execution via exec() allows arbitrary code execution", VulnerabilitySeverity.CRITICAL, "CWE-95"),
         (r"(os\.system|subprocess\.Popen|subprocess\.call|subprocess\.run)\s*\([^)]*shell\s*=\s*True[^)]*\)", "COMMAND-INJECTION", "Subprocess invocation with shell=True enables OS command injection", VulnerabilitySeverity.HIGH, "CWE-78"),
+        (r"(?i)f['\"][^'\"]*?\b(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE)\b.*?\{.*?\}", "SQL-INJECTION-FORMAT", "SQL query constructed with f-string interpolation exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
+        (r"(?i)[\'\"][^\'\"]*?\b(SELECT|INSERT|UPDATE|DELETE)\b.*?[\'\"]\s*%\s*\(", "SQL-INJECTION-PERCENT", "SQL query formatted using % operator exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
+        (r"(?i)[\'\"][^\'\"]*?\b(SELECT|INSERT|UPDATE|DELETE)\b.*?[\'\"]\s*\+\s*[a-zA-Z_]", "SQL-INJECTION-CONCAT", "SQL query constructed with string concatenation exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
         (r"cursor\.execute\s*\(\s*f['\"].*?\{.*?\}", "SQL-INJECTION-FORMAT", "SQL query constructed with f-string interpolation exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
         (r"cursor\.execute\s*\(\s*['\"].*?%\s*\(", "SQL-INJECTION-PERCENT", "SQL query formatted using % operator exposes database to SQL injection", VulnerabilitySeverity.HIGH, "CWE-89"),
         (r"pickle\.loads\s*\(", "INSECURE-DESERIALIZATION", "Unpickling untrusted data leads to remote code execution", VulnerabilitySeverity.HIGH, "CWE-502"),
@@ -57,7 +60,7 @@ class SecurityLinter:
                     )
                     findings.append(finding)
 
-        # AST-level deep check for SQL injections in execute calls
+        # AST-level deep check for SQL injections in execute calls and variable assignments
         try:
             tree = ast.parse(source_code)
             for node in ast.walk(tree):
@@ -77,6 +80,25 @@ class SecurityLinter:
                                     suggested_fix="Use parameterized queries e.g., cursor.execute('SELECT * FROM t WHERE id = %s', (id,))"
                                 )
                             )
+                elif isinstance(node, ast.Assign):
+                    for target in node.targets:
+                        target_name = getattr(target, "id", "")
+                        if any(kw in target_name.lower() for kw in ("query", "sql", "stmt", "statement")):
+                            if isinstance(node.value, (ast.JoinedStr, ast.BinOp)):
+                                if not any(f.line_number == node.lineno for f in findings):
+                                    findings.append(
+                                        VulnerabilityFinding(
+                                            rule_id="AST-SQL-INJECTION",
+                                            title="Dynamic SQL Query in Variable Assignment",
+                                            description="Found dynamic string concatenation/interpolation in SQL statement variable. Use parameterized queries.",
+                                            severity=VulnerabilitySeverity.HIGH,
+                                            file_path=file_path,
+                                            line_number=node.lineno,
+                                            code_snippet=lines[node.lineno - 1].strip() if node.lineno <= len(lines) else "",
+                                            cwe_id="CWE-89",
+                                            suggested_fix="Use parameterized queries e.g., cursor.execute('SELECT * FROM t WHERE id = %s', (id,))"
+                                        )
+                                    )
         except SyntaxError:
             pass
 

@@ -78,7 +78,13 @@ class LLMClient:
         Deterministic offline remediator used for testing, CI/CD, and demo runs
         without requiring live API tokens.
         """
-        if "SQL" in prompt or "cursor.execute" in prompt:
+        if "email_input" in prompt:
+            return {
+                "explanation": "Parametrized SQL query using tuple arguments instead of f-string interpolation to prevent SQL injection (CWE-89).",
+                "original_snippet": 'query = f"SELECT user_id, role FROM users WHERE email = \'{email_input}\' AND password = \'{password_input}\'\"\n        cursor.execute(query)',
+                "remediated_snippet": 'query = "SELECT user_id, role FROM users WHERE email = %s AND password = %s"\n        cursor.execute(query, (email_input, password_input))'
+            }
+        elif "SQL" in prompt or "cursor.execute" in prompt:
             return {
                 "explanation": "Parametrized SQL query using tuple arguments instead of f-string interpolation to prevent SQL injection (CWE-89).",
                 "original_snippet": 'cursor.execute(f"SELECT * FROM users WHERE username = \'{username}\'")',
