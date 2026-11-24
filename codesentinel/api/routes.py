@@ -55,6 +55,8 @@ async def audit_code_snippet(req: SnippetAuditRequest):
     scoped_res = scoper.extract_modified_scopes("snippet.py", req.code, lines_to_scope)
 
     patch_data = None
+    remediated_code = req.code
+
     if findings:
         prompt_text = f"File: snippet.py\nCode:\n{req.code}\nVulnerabilities:\n" + "\n".join(
             f"- {f.rule_id}: {f.description}" for f in findings
@@ -63,8 +65,22 @@ async def audit_code_snippet(req: SnippetAuditRequest):
         orig = fix.get("original_snippet", "").strip()
         new_c = fix.get("remediated_snippet", "").strip()
 
+        # Compute full remediated code
+        if orig in req.code:
+            remediated_code = req.code.replace(orig, new_c, 1)
+        else:
+            # Line-by-line whitespace-tolerant fallback replacement
+            orig_lines = [l.strip() for l in orig.splitlines() if l.strip()]
+            req_lines = req.code.splitlines()
+            for i in range(len(req_lines) - len(orig_lines) + 1):
+                window = [req_lines[i + j].strip() for j in range(len(orig_lines))]
+                if window == orig_lines:
+                    before = "\n".join(req_lines[:i])
+                    after = "\n".join(req_lines[i + len(orig_lines):])
+                    remediated_code = (before + "\n" if before else "") + new_c + ("\n" + after if after else "")
+                    break
+
         # Compute diff
-        remediated_code = req.code.replace(orig, new_c, 1) if orig in req.code else req.code
         diff = "\n".join(difflib.unified_diff(
             req.code.splitlines(),
             remediated_code.splitlines(),
@@ -83,7 +99,8 @@ async def audit_code_snippet(req: SnippetAuditRequest):
         "status": "success",
         "findings": [f.model_dump() for f in findings],
         "token_savings_pct": scoped_res.token_reduction_pct,
-        "patch": patch_data
+        "patch": patch_data,
+        "remediated_code": remediated_code
     }
 
 
