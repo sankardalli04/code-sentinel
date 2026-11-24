@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "code-sentinel"
+version = "0.1.0"
+description = "Autonomous Agentic Code Auditor & Isolated Sandbox Remediator"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Sankar Dalli", email = "sankardalli04@gmail.com" }
+]
+keywords = [
+    "ai-agent",
+    "security-audit",
+    "docker-sandbox",
+    "ast-parser",
+    "self-healing-code",
+    "github-action",
+    "devsecops",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "httpx>=0.27.0",
+    "docker>=7.0.0",
+    "redis>=5.0.0",
+    "click>=8.1.0",
+    "rich>=13.7.0",
+    "tree-sitter>=0.21.0; python_version < '3.13'",
+    "jinja2>=3.1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.3.0",
+    "black>=24.2.0",
+]
+
+[project.scripts]
+codesentinel = "codesentinel.cli:main"
