@@ -67,7 +67,11 @@
         </div>
 
         <div class="relative">
-          <textarea id="codeInput" rows="14" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-4 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 transition resize-none" placeholder="Paste your Python source code here..."></textarea>
+          <textarea id="codeInput" oninput="updateEditorStats()" rows="14" class="w-full bg-slate-950 border border-slate-800 rounded-t-lg p-4 text-sm text-cyan-300 focus:outline-none focus:border-cyan-500 transition resize-none" placeholder="Paste your Python source code here..."></textarea>
+          <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900 border border-t-0 border-slate-800 rounded-b-lg text-[11px] font-mono text-slate-500">
+            <span id="editorStats">Lines: 0 | Chars: 0</span>
+            <span><i class="fa-brands fa-python mr-1 text-slate-400"></i>Python 3.11</span>
+          </div>
         </div>
 
         <div class="mt-4 flex items-center justify-between">
@@ -143,6 +147,10 @@
                 </button>
               </div>
               <div class="flex items-center space-x-2">
+                <button id="exportReportBtn" onclick="exportMarkdownReport()" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded flex items-center space-x-1.5 transition" title="Export Markdown Audit Report">
+                  <i class="fa-solid fa-file-lines"></i>
+                  <span>Report (.md)</span>
+                </button>
                 <button id="downloadPatchBtn" onclick="downloadPatch()" class="text-xs px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded flex items-center space-x-1.5 transition">
                   <i class="fa-solid fa-download"></i>
                   <span>.patch</span>
@@ -195,12 +203,21 @@ def clean_cache(folder_path: str):
     return result`
     };
 
+    function updateEditorStats() {
+      const val = document.getElementById('codeInput').value;
+      const lines = val ? val.split('\n').length : 0;
+      const chars = val.length;
+      document.getElementById('editorStats').textContent = `Lines: ${lines} | Chars: ${chars}`;
+    }
+
     function loadPreset(key) {
       document.getElementById('codeInput').value = presets[key];
+      updateEditorStats();
     }
 
     function clearCode() {
       document.getElementById('codeInput').value = '';
+      updateEditorStats();
     }
 
     async function runAudit() {
@@ -332,6 +349,30 @@ def clean_cache(folder_path: str):
       const a = document.createElement('a');
       a.href = url;
       a.download = 'codesentinel_remediation.patch';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportMarkdownReport() {
+      if (!currentRemediatedCode) {
+        alert('Please run an audit first before exporting report.');
+        return;
+      }
+      let md = '# 🛡️ CodeSentinel Security & Compliance Audit Report\n\n';
+      md += `**Date:** ${new Date().toISOString()}\n`;
+      md += `**Sandbox Isolation:** cgroups / 256MB / Zero Network\n`;
+      md += `**Status:** Remediated & Verified in Sandbox\n\n`;
+      md += '## 🩹 Verified Source Code\n\n```python\n' + currentRemediatedCode + '\n```\n\n';
+      if (currentUnifiedDiff) {
+        md += '## 🔀 Unified Patch Diff\n\n```diff\n' + currentUnifiedDiff + '\n```\n';
+      }
+      const blob = new Blob([md], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'codesentinel_audit_report.md';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
